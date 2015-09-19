@@ -16,7 +16,7 @@
 
 ### Gemfile
 
-    gem 'china_city'
+    gem 'china_city', git: 'https://github.com:cheenwe/china_city.git'
 
 ### app/assets/javascripts/application.js
 
@@ -29,18 +29,66 @@
 
 ## 使用
 
-在页面中加入选择框，示例代码使用 slim 格式
+框架：rails + AngularJS
+
+在form页面 代码 格式
 
 ```ruby
-  .city-group
-    select.city-select
-      option --省份--
-      = options_for_select(ChinaCity.list)
-    select.city-select
-      option --城市--
-    select.city-select
-      option --地区--
+  .form-group.col-md-12
+    = f.label :city, class: "label-title col-md-1"
+    = ng_city f
 ```
+
+ng_city 方法
+
+```ruby
+  def ng_city(f)
+    htmls = []
+    {provinces: :cities, cities: :areas, areas: nil}.each do |parents, subs|
+      parent = parents.to_s.singularize
+      label_and_select = []
+      ng_change = subs ? "city_option_change(current.#{parent}, '#{subs}')" : "city_option_change(current.#{parent}, null)"
+        html = content_tag :select, class: "city-select form-control col-xs-1", "ng-options" => "option[1] as option[0] for option in city_options.#{parents}", "ng-model" => "current.#{parent}", "ng-change"=>ng_change do
+          content_tag :option, t("helpers.options.#{parents}"), value: ""
+        end
+      label_and_select << html.html_safe
+      html = content_tag :div, label_and_select.join("").html_safe, class: "col-md-2"
+      htmls << html.html_safe
+    end
+    htmls.join("").html_safe
+  end
+
+```
+
+
+AngularJS 获取数据
+
+```ruby
+  $scope.city_options = {provinces: <%= ChinaCity.list.to_s.html_safe %>};
+  $scope.city_option_change = function(code, sub_collection){
+    if(sub_collection){
+      var url = "/china_city/" + code;
+      $http.get(url).success(function(resp){
+        $scope.city_options[sub_collection] = resp;
+      });
+    }
+  }
+
+  $scope.after_show = function(resp){
+    if($scope.city_options){
+      if($scope.current.province){
+        $scope.city_option_change($scope.current.province, 'cities');
+      }
+
+      if($scope.current.city){
+        $scope.city_option_change($scope.current.city, 'areas');
+      }
+    }
+  }
+```
+
+
+
 
 请留意：所有选择框都要有 `city-select` class，并都包含于 class='city-group' 的 DOM 元素之下。
 
